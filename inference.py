@@ -346,6 +346,19 @@ class ParticleFilter(InferenceModule):
         weight with each position) is incorrect and may produce errors.
         """
         "*** YOUR CODE HERE ***"
+
+        i, p_count = 0, 0
+        modul = int(len(self.legalPositions) % self.numParticles)
+        self.parts = []
+        for p in self.legalPositions:
+            if i % modul == 0:
+                self.parts.append(p)
+                p_count += 1
+            if p_count >= self.numParticles:
+                break
+            i += 1
+
+        
         "*** END YOUR CODE HERE ***"
 
 
@@ -380,7 +393,19 @@ class ParticleFilter(InferenceModule):
         emissionModel = busters.getObservationDistribution(noisyDistance)
         pacmanPosition = gameState.getPacmanPosition()
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        parts_distr = util.Counter()
+
+        for p in self.parts: #only particles get considered. 
+            parts_distr[p] += emissionModel[p] / (self.parts.count(p) / len(self.parts))
+            # parts_distr holds values of each particle.
+
+        
+        self.parts = []
+        for i in range(self.numParticles):
+            s = util.sample(parts_distr)
+            self.parts.append(s)
+
         "*** END YOUR CODE HERE ***"
 
 
