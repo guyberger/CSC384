@@ -393,18 +393,42 @@ class ParticleFilter(InferenceModule):
         emissionModel = busters.getObservationDistribution(noisyDistance)
         pacmanPosition = gameState.getPacmanPosition()
         "*** YOUR CODE HERE ***"
-
+        
+        all_zero, zero_count = False, len(legalPositions)
         parts_distr = util.Counter()
+
+        for p in legalPositions:
+            if not len(self.parts):
+                break
+            particle_prob = self.parts.count(p) / len(self.parts)
+            nxt_wt = 0 if (not particle_prob) else emissionModel / particle_prob
+            parts_distr[p] = nxt_wt
+
+        if not parts_distr.totalCount():
+            initializeUniformly(gameState)
+            parts_distr = util.Counter()
+            for p in legalPositions:
+                parts_distr[p] = 1 if (p in self.parts) else 0
+        
+        parts_distr.normalize()
+        self.beliefs = parts_distr
+        
+        else: #not all zero
+            for i in len(self.parts):
 
         for p in self.parts: #only particles get considered. 
             parts_distr[p] += emissionModel[p] / (self.parts.count(p) / len(self.parts))
             # parts_distr holds values of each particle.
-
+        
+        parts_distr.normalize()
+        #now we resample
         
         self.parts = []
         for i in range(self.numParticles):
             s = util.sample(parts_distr)
             self.parts.append(s)
+
+        self.beliefs = parts_distr
 
         "*** END YOUR CODE HERE ***"
 
