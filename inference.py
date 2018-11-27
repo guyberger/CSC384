@@ -346,23 +346,22 @@ class ParticleFilter(InferenceModule):
         weight with each position) is incorrect and may produce errors.
         """
         "*** YOUR CODE HERE ***"
-
         i, p_count = 0, 0
-        modul = int(len(self.legalPositions) % self.numParticles)
         self.parts = []
-        for p in self.legalPositions:
-            if i % modul == 0:
+        while p_count < self.numParticles:
+            for p in self.legalPositions:
                 self.parts.append(p)
                 p_count += 1
-            if p_count >= self.numParticles:
-                break
-            i += 1
-
-        
+                if p_count >= self.numParticles:
+                    break
+            
         "*** END YOUR CODE HERE ***"
 
 
     def observe(self, observation, gameState):
+        #print "------------"
+        #print "observing"
+        #print "------------"
         """
         Update beliefs based on the given distance observation. Make sure to
         handle the special case where all particles have weight 0 after
@@ -394,41 +393,30 @@ class ParticleFilter(InferenceModule):
         pacmanPosition = gameState.getPacmanPosition()
         "*** YOUR CODE HERE ***"
         
-        all_zero, zero_count = False, len(legalPositions)
         parts_distr = util.Counter()
-
-        for p in legalPositions:
-            if not len(self.parts):
-                break
-            particle_prob = self.parts.count(p) / len(self.parts)
-            nxt_wt = 0 if (not particle_prob) else emissionModel / particle_prob
-            parts_distr[p] = nxt_wt
-
-        if not parts_distr.totalCount():
-            initializeUniformly(gameState)
-            parts_distr = util.Counter()
-            for p in legalPositions:
-                parts_distr[p] = 1 if (p in self.parts) else 0
         
-        parts_distr.normalize()
-        self.beliefs = parts_distr
-        
-        else: #not all zero
-            for i in len(self.parts):
+        if noisyDistance == None:
+            g_pos = self.getJailPosition()
+            self.parts = [g_pos for i in range(self.numParticles)]
+        else:
+            for p in self.parts:
+                # Pr(e|Xt=p) = Pr(Xt=p|e)Pr(e) / Pr(Xt=p) = Pr(Xt=p|e) / Pr(Xt=p)
+                trueDistance = util.manhattanDistance(p, pacmanPosition)
+                nxt_wt = float(emissionModel[trueDistance])
+                parts_distr[p] += nxt_wt
 
-        for p in self.parts: #only particles get considered. 
-            parts_distr[p] += emissionModel[p] / (self.parts.count(p) / len(self.parts))
+            if not parts_distr.totalCount():
+                self.initializeUniformly(gameState)
+                return
+            
             # parts_distr holds values of each particle.
-        
-        parts_distr.normalize()
-        #now we resample
-        
-        self.parts = []
-        for i in range(self.numParticles):
-            s = util.sample(parts_distr)
-            self.parts.append(s)
-
-        self.beliefs = parts_distr
+            #now we resample
+            
+            parts_distr.normalize()
+            self.parts = []
+            for i in range(self.numParticles):
+                s = util.sample(parts_distr)
+                self.parts.append(s)
 
         "*** END YOUR CODE HERE ***"
 
@@ -461,7 +449,13 @@ class ParticleFilter(InferenceModule):
         Counter object)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        self.beliefs = util.Counter()
+        for p in self.legalPositions:
+            self.beliefs[p] = float(float(self.parts.count(p)) / float(len(self.parts)))
+        jail_pos = self.getJailPosition()
+        self.beliefs[jail_pos] = float(float(self.parts.count(jail_pos)) / float(len(self.parts)))
+        self.beliefs.normalize() # shouldnt be necessary
+        return self.beliefs
         "*** END YOUR CODE HERE ***"
 
 
