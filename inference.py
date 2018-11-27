@@ -540,7 +540,20 @@ class JointParticleFilter:
         weight with each position) is incorrect and may produce errors.
         """
         "*** YOUR CODE HERE ***"
+        i, p_count = 0, 0
+        self.parts = []
+        self.ghost_tup_options = list(itertools.product(self.legalPositions, repeat = self.numGhosts))
+        random.shuffle(self.ghost_tup_options)
 
+        #ghost_tup_options : [(pos1,pos2,..,posk),(posi,posj,...)] premut for k ghosts
+        i = 0
+        while p_count < self.numParticles:
+            self.parts.append(self.ghost_tup_options[i % len(self.ghost_tup_options)])
+            i += 1
+            p_count += 1
+            if p_count >= self.numParticles:
+                break
+            
         "*** END YOUR CODE HERE ***"
 
 
@@ -608,6 +621,31 @@ class JointParticleFilter:
         emissionModels = [busters.getObservationDistribution(dist) for dist in noisyDistances]
 
         "*** YOUR CODE HERE ***"
+        parts_distr = util.Counter()
+
+        for particle in self.parts:
+            nxt_wt = 1
+            for i in range(self.numGhosts):
+                if noisyDistances[i] == None: #ghost captured
+                    continue
+                trueDist = util.manhattanDistance(particle[i], pacmanPosition)
+                nxt_wt *= float(emissionModels[i][trueDist])
+            parts_distr[particle] += nxt_wt
+
+        if not parts_distr.totalCount():
+            self.initializeParticles()
+            return
+
+        parts_distr.normalize()
+        self.parts = []
+        for i in range(self.numParticles):
+            s = util.sample(parts_distr)
+            self.parts.append(s)
+        
+        for pidx in range(len(self.parts)):
+            for i in range(self.numGhosts):
+                if noisyDistances[i] == None:
+                    self.parts[pidx] = self.getParticleWithGhostInJail(self.parts[pidx], i)
 
         "*** END YOUR CODE HERE ***"
 
@@ -678,7 +716,16 @@ class JointParticleFilter:
 
     def getBeliefDistribution(self):
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        self.beliefs = util.Counter()
+        """
+        for p in self.ghost_tup_options:
+            self.beliefs[p] = float(float(self.parts.count(p)) / float(len(self.parts)))
+        """
+        for p in self.parts:
+            self.beliefs[p] = float(float(self.parts.count(p)) / float(len(self.parts)))
+        return self.beliefs
+
         "*** END YOUR CODE HERE ***"
 
 
